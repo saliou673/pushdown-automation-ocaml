@@ -141,7 +141,8 @@ let afficher_pile pile =
   Printf.printf " ]"
 ;;
 let afficher_etat_automate etat_courant transition mot pile = 
-  Printf.printf "\027[34;1m Etat courant: %s \t\027[32;1m Mot: %s \t\027[36;1m Transition vers %s(Lu: %c) \t\027[31;1m Pile après transition: " etat_courant.nom mot transition.destination.nom transition.valeur;
+  Printf.printf "\027[34;1m Etat courant: %s \t\027[32;1m Mot: %s \t\027[36;1m Transition vers %s(Lu: %c) \t\027[31;1m Pile après transition: " 
+            etat_courant.nom mot transition.destination.nom transition.valeur;
   afficher_pile pile;
   Printf.printf "\n\027[0m"
 ;;
