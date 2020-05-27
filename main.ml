@@ -15,16 +15,16 @@ type type_etat = Initial | Final | Intermediaire | InitialFinal;;
 * empiler: bool, indique si la valeur doit être empiler ou pas
 * valeur: char, la valeur à empiler ou dépiler
 ***************************************************************)
-type regle = {empiler:bool; valeur: char};;
+type regle_transition = {empiler:bool; valeur: char};;
 (* Le type transition caractérise la transition entre deux etats d'un automates *)
-type transition = {destination: etat; valeur: char; regle: regle}
+type transition = {destination: etat; valeur: char; regle: regle_transition}
 
 (* etat carctérise un etat d'un automate *)
 and etat = {nom:string;  nature: type_etat; mutable transitions: transition list};;
 
 (* Désigne un automate à pile *)
 type automate = {etat_init: etat; alphabet_automate: char list; alphabet_pile: char list};;
-
+ 
 (*****************************************
 * Ajoute une transition entre deux etats
 * @param etatSrc etat source
@@ -37,7 +37,7 @@ let ajouter_transition etatSrc etatDest valeur regle =
 ;;
 
 (**************************************************************  
-* Créer un nouveau automate 
+* Créer un nouveau automate
 * @param etat_i etat designe l'etat initial de l'automate
 * @param alphabet_automate char list désigne l'alphabet de l'automate
 * @param alphabet_pile char list désigne l'alphabet de la pile.
@@ -46,47 +46,6 @@ let creer_automate etat_i alphabet_automate alphabet_pile =
   {etat_init = etat_i; alphabet_automate = alphabet_automate; alphabet_pile = alphabet_pile}
 ;;
 
-
-(*******************************************
-* Convertie un etat en chaine de caractère.
-* @param n type_etat valeur à convertir. 
-* @return string
-********************************************)
-let type_etat_to_string n = 
-  match n with 
-  | Initial       -> "Initial"
-  | Final         -> "Final"
-  | Intermediaire -> "Intermediaire"
-  | _  -> "InitialFinal"
-;;
-
-(*********************************************************************
-* Affiche un les caractéristiques d'un etat de façon très simple en 
-* @param etat Etat à afficher
-* @return unit
-**********************************************************************)
-let affichage_simple_etat e =
-  Printf.printf "Nom = %s\t Type = %s \t Transitions = [" e.nom (type_etat_to_string e.nature);
-  let rec aux transitions = 
-    match transitions with
-    | [] -> ()
-    | h::q -> Printf.printf "(%s, %c, %s %c)" h.destination.nom h.valeur 
-              (if h.regle.empiler then "Empiler" else "Dépiler")  h.regle.valeur;
-              aux q
-    in aux e.transitions;
-    Printf.printf "]\n"
-;;
-
-(*********************************************************
-* Convertie une chaine en caractère en liste de caractères.
-* @param mot string mot à transformer en liste de caractères.
-* @return char list
- **********************************************************)
-let string_to_list mot =
-  let rec aux i l =
-   if i < 0 then l else aux (i - 1) (mot.[i] :: l) in
-  aux (String.length mot - 1) []
-;;
 
 (*******************************************************************
 * Retourne la i-ème transition contenu dans une liste de transition
