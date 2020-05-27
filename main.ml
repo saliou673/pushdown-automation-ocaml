@@ -8,7 +8,7 @@
 open Printf;;
 
 (*  type_etat désigne l'ensemble des etats possibles pour une etat d'un automate*)
-type type_etat = Initial | Final | Intermediaire | InitialFinal | Mixte;;
+type type_etat = Initial | Final | Intermediaire | InitialFinal;;
 
 (*************************************************************
 * Désigne une règle donnée sur une transition 
@@ -67,8 +67,7 @@ let type_etat_to_string n =
   | Initial       -> "Initial"
   | Final         -> "Final"
   | Intermediaire -> "Intermediaire"
-  | InitialFinal  -> "InitialFinal"
-  | _              -> "Mixte"
+  | _  -> "InitialFinal"
 ;;
 
 (*********************************************************************
@@ -150,6 +149,9 @@ let afficher_etat_automate etat_courant transition mot pile =
 let rec iter_etat etat_courant mot index_car index_trans pile = 
   let trans_courant = ieme_transition etat_courant.transitions index_trans in
   match trans_courant with
+  | x when trans_courant.valeur = ' ' -> 
+          afficher_etat_automate etat_courant trans_courant (decouper_mot mot index_car) pile;
+          (iter_etat trans_courant.destination mot index_car 0 pile) || (iter_etat etat_courant mot index_car (index_trans + 1) pile)
   | x when trans_courant.valeur = mot.[index_car] ->
           (match trans_courant.regle.empiler with
           | true when (index_car + 1) = (String.length mot)-> 
@@ -158,16 +160,35 @@ let rec iter_etat etat_courant mot index_car index_trans pile =
                   mot_est_trouve trans_courant.destination pile
 
           | false  when (index_car + 1) = (String.length mot)  ->  
-                  afficher_etat_automate etat_courant trans_courant (decouper_mot mot index_car) (depiler_pile pile false);
-                  afficher_etat_automate etat_courant trans_courant  " " (depiler_pile (depiler_pile pile false) true);
-                  mot_est_trouve trans_courant.destination (depiler_pile pile false)
+                (* Printf.printf "0=> courant = %c, lu = %c, car regle = %c pile = %c\n" mot.[index_car] trans_courant.valeur trans_courant.regle.valeur (List.hd pile); *)
+                let b = trans_courant.regle.valeur = (List.hd pile) in
+                (match b with 
+                | true -> 
+                      afficher_etat_automate etat_courant trans_courant (decouper_mot mot index_car) (depiler_pile pile false);
+                      afficher_etat_automate etat_courant trans_courant  " " (depiler_pile (depiler_pile pile false) true);
+                      mot_est_trouve trans_courant.destination (depiler_pile pile false)
+                | _   -> afficher_etat_automate etat_courant trans_courant (decouper_mot mot index_car) (depiler_pile pile false);
+                        false
+                )
 
           | true -> afficher_etat_automate etat_courant trans_courant (decouper_mot mot index_car)  (mot.[index_car]::pile); 
                     iter_etat trans_courant.destination mot (index_car + 1) 0 (mot.[index_car]::pile)
 
-          | false -> afficher_etat_automate etat_courant trans_courant (decouper_mot mot index_car)  (depiler_pile pile false);
-                    iter_etat trans_courant.destination mot  (index_car + 1) 0 (depiler_pile pile false))
-
+          | false -> 
+                    
+                    if trans_courant.regle.valeur = '*' then begin
+                      Printf.printf "1=> courant = %c, lu = %c, car regle = %c pile = %c\n" mot.[index_car] trans_courant.valeur trans_courant.regle.valeur (List.hd pile);
+                      afficher_etat_automate etat_courant trans_courant (decouper_mot mot index_car) pile;
+                      iter_etat trans_courant.destination mot  (index_car + 1) 0 pile
+                    end else begin
+                      Printf.printf "2=> courant = %c, lu = %c, car regle = %c pile = %c\n" mot.[index_car] trans_courant.valeur trans_courant.regle.valeur (List.hd pile);
+                      let b = trans_courant.regle.valeur = (List.hd pile) in
+                      match b with 
+                      | true -> afficher_etat_automate etat_courant trans_courant (decouper_mot mot index_car)  (depiler_pile pile false);
+                                iter_etat trans_courant.destination mot  (index_car + 1) 0 (depiler_pile pile false)
+                      | _    ->  false
+                    end
+          )
   | _ when index_trans < ((List.length etat_courant.transitions)-1) -> 
             iter_etat etat_courant mot index_car (index_trans +1 ) pile
   | _  -> false
@@ -191,22 +212,61 @@ let afficher_resultat mot result =
   else Printf.printf "\027[31;1mLe mot \"%s\" n'est pas reconnu par l'automate\027[0m\n\n" mot
 ;;
 (*****************************************************
-*     E x e m p l e s
+*     E x e m p l e  1
 ******************************************************)
-(* a^n b^m  with n <= m; n, m >=0 *)
+(* a^n b^m  avec n <= m; n, m >=0 *)
 let e1 = {nom = "e1"; nature = Initial; transitions = []};;
 let e2 = {nom = "e2"; nature = Final; transitions = []};;
 ajouter_transition e1 e1 'a' {empiler = true; valeur = 'a'};;
 ajouter_transition e1 e2 'b' {empiler = false; valeur = 'a'};;
 ajouter_transition e1 e2 ' ' {empiler = false; valeur = '*'};;
 ajouter_transition e2 e2 'b' {empiler = false; valeur = 'a'};;
+ajouter_transition e2 e2 'b' {empiler = false; valeur = '*'};;
+(* ajouter_transition e2 e2 ' ' {empiler = false; valeur = '*'};; *)
 
 (* affichage_simple_etat e1;;
 affichage_simple_etat e2;; *)
 
-let alphabet = generer_alphabet_fr();;
+let alphabet = 'a'::'b'::[];;
 let automate1 = creer_automate e1 alphabet alphabet;;
 
-let mot = "aaa";;
+let mot = "aaabbbbb";;
 let resultat = valider_mot automate1 mot;;
 afficher_resultat mot resultat;;
+
+(*****************************************************
+*     E x e m p l e  2
+******************************************************)
+(* a^i b^j c^k  avec i=j ou i=k *)
+(*let b = {nom = "b"; nature = Initial; transitions = []};;
+let c = {nom = "c"; nature = Intermediaire; transitions = []};;
+let d = {nom = "d"; nature = Final; transitions = []};;
+let e = {nom = "e"; nature = Intermediaire; transitions = []};;
+let f = {nom = "f"; nature = Final; transitions = []};;
+
+ajouter_transition b b 'a' {empiler = true; valeur = 'a'};;
+ajouter_transition b c ' ' {empiler = false; valeur = '*'};;
+ajouter_transition b e ' ' {empiler = false; valeur = '*'};;
+ajouter_transition c c 'b' {empiler = false; valeur = 'a'};;
+ajouter_transition c d ' ' {empiler = false; valeur = '*'};;
+ajouter_transition d d 'c' {empiler = false; valeur = '*'};;
+ajouter_transition e e 'b' {empiler = false; valeur = '*'};;
+ajouter_transition e f ' ' {empiler = false; valeur = '*'};;
+ajouter_transition f f 'c' {empiler = false; valeur = 'a'};;
+
+let alphabet = 'a'::'b'::'c'::[];;
+let automate2 = creer_automate b alphabet alphabet;;
+(* Test 1 *)
+let mot = "aabbc";;
+let resultat = valider_mot automate2 mot;;
+afficher_resultat mot resultat;;
+
+(* Test 2 *)
+let mot = "aaabbbccc";;
+let resultat = valider_mot automate2 mot;;
+afficher_resultat mot resultat;;
+
+(* Test 3 *)
+let mot = "aaabcc";;
+let resultat = valider_mot automate2 mot;;
+afficher_resultat mot resultat;;*)
